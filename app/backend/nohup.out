@@ -1,0 +1,113 @@
+INFO:     Started server process [21362]
+INFO:     Waiting for application startup.
+ERROR:    Traceback (most recent call last):
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/pymysql/connections.py", line 682, in connect
+    sock = socket.create_connection(
+  File "/Users/xuwei/.pyenv/versions/3.10.9/lib/python3.10/socket.py", line 845, in create_connection
+    raise err
+  File "/Users/xuwei/.pyenv/versions/3.10.9/lib/python3.10/socket.py", line 833, in create_connection
+    sock.connect(sa)
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/impl.py", line 178, in _do_get
+    with util.safe_reraise():
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/impl.py", line 176, in _do_get
+    return self._create_connection()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/pymysql/connections.py", line 372, in __init__
+    self.connect()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/pymysql/connections.py", line 744, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'mr-l3uctca1046yao4sw6.rwlb.rds.aliyuncs.com' (timed out)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/starlette/routing.py", line 638, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/fastapi/routing.py", line 257, in __aenter__
+    await self._router._startup()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/fastapi/routing.py", line 6161, in _startup
+    handler()
+  File "/Users/xuwei/Desktop/Themis/app/backend/themis/main.py", line 67, in startup
+    Base.metadata.create_all(bind=engine)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/sql/schema.py", line 5930, in create_all
+    bind._run_ddl_visitor(
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 3269, in _run_ddl_visitor
+    with self.begin() as conn:
+  File "/Users/xuwei/.pyenv/versions/3.10.9/lib/python3.10/contextlib.py", line 135, in __enter__
+    return next(self.gen)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 3259, in begin
+    with self.connect() as conn:
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 3295, in connect
+    return self._connection_cls(self)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2450, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/impl.py", line 178, in _do_get
+    with util.safe_reraise():
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/impl.py", line 176, in _do_get
+    return self._create_connection()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/pymysql/connections.py", line 372, in __init__
+    self.connect()
+  File "/Users/xuwei/Desktop/Themis/app/backend/venv/lib/python3.10/site-packages/pymysql/connections.py", line 744, in connect
+    raise exc
+sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (2003, "Can't connect to MySQL server on 'mr-l3uctca1046yao4sw6.rwlb.rds.aliyuncs.com' (timed out)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+ERROR:    Application startup failed. Exiting.

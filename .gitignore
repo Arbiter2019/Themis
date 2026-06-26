@@ -1,0 +1,11 @@
+spec/
+test/
+app/env/
+app/logs/
+app/backend/.venv/
+app/frontend/node_modules/
+app/frontend/dist/
+app/frontend/tsconfig.tsbuildinfo
+__pycache__/
+.pytest_cache/
+.DS_Store
