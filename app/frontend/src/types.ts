@@ -17,6 +17,7 @@ export interface Experiment {
   id: number;
   uuid: string;
   name: string;
+  api_key?: string;
   response_mode: "blocking" | "streaming";
   input_schema: Record<string, unknown>;
   preference_enabled: boolean;
@@ -88,4 +89,3 @@ export interface LabelingTaskDetail {
     display_order: number;
   }>;
 }
-

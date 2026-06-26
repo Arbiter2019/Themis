@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import statistics
+import threading
 import uuid
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
-from fastapi import BackgroundTasks, HTTPException
+from fastapi import HTTPException
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -133,7 +134,11 @@ def update_experiment(db: Session, experiment_id: int, payload: ExperimentUpdate
     return get_experiment(db, exp.id)
 
 
-def import_samples(db: Session, experiment_id: int, samples: list[dict[str, Any]], background_tasks: BackgroundTasks, user: CurrentUser) -> dict:
+_running_experiments: set[int] = set()
+_running_experiments_lock = threading.Lock()
+
+
+def import_samples(db: Session, experiment_id: int, samples: list[dict[str, Any]], user: CurrentUser) -> dict:
     exp = get_experiment(db, experiment_id)
     if exp.status != ExperimentStatus.NOT_STARTED:
         raise HTTPException(status_code=400, detail="Only not-started experiments can import samples")
@@ -157,8 +162,32 @@ def import_samples(db: Session, experiment_id: int, samples: list[dict[str, Any]
         experiment_uuid=exp.uuid,
         metadata={"count": len(samples)},
     )
-    background_tasks.add_task(execute_experiment_sync, exp.id)
+    start_experiment_execution(exp.id, exp.uuid)
     return {"imported": len(samples), "experiment_uuid": exp.uuid, "errors": []}
+
+
+def start_experiment_execution(experiment_id: int, experiment_uuid: str | None = None) -> bool:
+    with _running_experiments_lock:
+        if experiment_id in _running_experiments:
+            write_log(
+                action="experiment.execute.start",
+                status="already_running",
+                experiment_uuid=experiment_uuid,
+                metadata={"experiment_id": experiment_id},
+            )
+            return False
+        _running_experiments.add(experiment_id)
+    thread = threading.Thread(target=_execute_experiment_thread, args=(experiment_id,), daemon=True)
+    thread.start()
+    return True
+
+
+def _execute_experiment_thread(experiment_id: int) -> None:
+    try:
+        execute_experiment_sync(experiment_id)
+    finally:
+        with _running_experiments_lock:
+            _running_experiments.discard(experiment_id)
 
 
 def execute_experiment_sync(experiment_id: int) -> None:
@@ -173,11 +202,28 @@ async def _execute_experiment(experiment_id: int, session_factory) -> None:
         exp = get_experiment(db, experiment_id)
         samples = list(db.scalars(select(ExperimentSample).where(ExperimentSample.experiment_id == exp.id).order_by(ExperimentSample.id)))
         variants = list(exp.variants)
+        write_log(
+            action="experiment.execute.start",
+            status="started",
+            experiment_uuid=exp.uuid,
+            metadata={"sample_count": len(samples), "variant_count": len(variants)},
+        )
+        if not samples or not variants:
+            raise RuntimeError(f"Cannot execute experiment with sample_count={len(samples)} variant_count={len(variants)}")
         for sample in samples:
             for variant in variants:
                 await _run_variant(db, exp, sample, variant)
             exp.executed_samples += 1
             db.commit()
+            write_log(
+                action="experiment.execute.progress",
+                status="running",
+                experiment_uuid=exp.uuid,
+                metadata={"executed_samples": exp.executed_samples, "total_samples": exp.total_samples, "sample_uuid": sample.sample_uuid},
+            )
+        run_count = db.scalar(select(func.count(VariantRun.id)).where(VariantRun.experiment_id == exp.id)) or 0
+        if run_count == 0:
+            raise RuntimeError("Experiment execution finished without any variant runs")
         if exp.preference_enabled:
             _create_labeling_tasks(db, exp)
             exp.status = ExperimentStatus.RUNNING
@@ -185,7 +231,7 @@ async def _execute_experiment(experiment_id: int, session_factory) -> None:
             exp.status = ExperimentStatus.COMPLETED
             exp.completed_at = datetime.utcnow()
         db.commit()
-        write_log(action="experiment.execute", status="success", experiment_uuid=exp.uuid)
+        write_log(action="experiment.execute", status="success", experiment_uuid=exp.uuid, metadata={"run_count": run_count})
     except Exception as exc:
         db.rollback()
         exp = db.get(Experiment, experiment_id)

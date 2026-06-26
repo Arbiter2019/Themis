@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
@@ -143,11 +143,10 @@ def api_update_experiment(
 def api_import_samples(
     experiment_id: int,
     payload: ImportSamplesRequest,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: CurrentUser = Depends(require_admin),
 ) -> dict:
-    return import_samples(db, experiment_id, payload.samples, background_tasks, user)
+    return import_samples(db, experiment_id, payload.samples, user)
 
 
 @app.get("/api/experiments/{experiment_id}/report", response_model=ReportOut)

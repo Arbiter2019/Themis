@@ -6,6 +6,9 @@ app/backend/.venv/
 app/frontend/node_modules/
 app/frontend/dist/
 app/frontend/tsconfig.tsbuildinfo
+crawler/output/
+crawler/app/config.json
 __pycache__/
 .pytest_cache/
 .DS_Store
+crawler/

@@ -32,7 +32,7 @@ export default function ExperimentEditPage({ id, go }: { id?: number; go: (route
       .then((exp) => {
         form.setFieldsValue({
           name: exp.name,
-          api_key: "",
+          api_key: exp.api_key || "",
           response_mode: exp.response_mode,
           preference_enabled: exp.preference_enabled,
           variants: Object.fromEntries((exp.variants || []).map((variant) => [variant.role, variant]))
@@ -102,7 +102,7 @@ export default function ExperimentEditPage({ id, go }: { id?: number; go: (route
           <Input maxLength={100} />
         </Form.Item>
         <Form.Item name="api_key" label="workflow API Key" rules={[{ required: true, message: "请输入 API Key" }, { max: 255 }]}>
-          <Input.Password maxLength={255} />
+          <Input maxLength={255} />
         </Form.Item>
         <Form.Item name="response_mode" label="response_mode">
           <Radio.Group
@@ -176,4 +176,3 @@ function VariantCard({
     </Card>
   );
 }
-

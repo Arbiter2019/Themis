@@ -53,6 +53,7 @@ class ExperimentOut(BaseModel):
     id: int
     uuid: str
     name: str
+    api_key: str
     response_mode: ResponseMode
     input_schema: dict[str, Any]
     preference_enabled: bool
