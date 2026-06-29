@@ -77,7 +77,10 @@ def render_merge_template(template: str | None, payload: dict[str, Any]) -> str:
     for literal, field_name, _, _ in Formatter().parse(template):
         rendered.append(literal)
         if field_name:
-            value = _lookup(payload, field_name)
+            try:
+                value = _lookup(payload, field_name)
+            except KeyError:
+                value = ""
             rendered.append("" if value is None else str(value))
     return "".join(rendered)
 
