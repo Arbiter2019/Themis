@@ -15,6 +15,7 @@ export default function ExperimentListPage({ go }: { go: (route: any) => void })
   const [rows, setRows] = useState<Experiment[]>([]);
   const [importing, setImporting] = useState<Experiment | null>(null);
   const [sampleText, setSampleText] = useState("");
+  const [importErrors, setImportErrors] = useState<unknown[]>([]);
 
   const load = async () => setRows(await api.listExperiments());
   useEffect(() => {
@@ -26,13 +27,16 @@ export default function ExperimentListPage({ go }: { go: (route: any) => void })
     try {
       const parsed = JSON.parse(sampleText);
       if (!Array.isArray(parsed)) throw new Error("导入内容必须是 JSON List");
+      if (parsed.length === 0) throw new Error("导入样本不能为空");
       const result = await api.importSamples(importing.id, parsed);
       if (result.errors.length) {
+        setImportErrors(result.errors);
         message.error("样本校验失败，请检查 JSON Schema");
       } else {
         message.success(`已导入 ${result.imported} 条样本，后台开始执行`);
         setImporting(null);
         setSampleText("");
+        setImportErrors([]);
         load();
       }
     } catch (error) {
@@ -69,7 +73,13 @@ export default function ExperimentListPage({ go }: { go: (route: any) => void })
               <Space>
                 {row.status === "not_started" && <Button onClick={() => go({ name: "experiment-edit", id: row.id })}>详情</Button>}
                 {row.status === "not_started" && (
-                  <Button icon={<UploadOutlined />} onClick={() => setImporting(row)}>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => {
+                      setImporting(row);
+                      setImportErrors([]);
+                    }}
+                  >
                     导入数据
                   </Button>
                 )}
@@ -81,9 +91,11 @@ export default function ExperimentListPage({ go }: { go: (route: any) => void })
       />
       <Modal title="导入 JSON List" open={!!importing} onCancel={() => setImporting(null)} onOk={submitImport} width={760}>
         <Typography.Paragraph type="secondary">导入后系统会按输入 JSON Schema 校验，通过后后台逐条调用 Dify。</Typography.Paragraph>
+        {importErrors.length > 0 && (
+          <pre className="import-errors">{JSON.stringify(importErrors, null, 2)}</pre>
+        )}
         <textarea className="sample-import" value={sampleText} onChange={(event) => setSampleText(event.target.value)} />
       </Modal>
     </div>
   );
 }
-

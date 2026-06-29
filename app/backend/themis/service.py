@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import statistics
 import threading
+import time
 import uuid
 from collections import defaultdict
 from datetime import datetime
@@ -142,6 +143,15 @@ def import_samples(db: Session, experiment_id: int, samples: list[dict[str, Any]
     exp = get_experiment(db, experiment_id)
     if exp.status != ExperimentStatus.NOT_STARTED:
         raise HTTPException(status_code=400, detail="Only not-started experiments can import samples")
+    if not samples:
+        write_log(
+            action="samples.import",
+            status="failed",
+            user_id=user.username,
+            experiment_uuid=exp.uuid,
+            why="Sample list is empty",
+        )
+        raise HTTPException(status_code=400, detail="导入样本不能为空")
     errors = []
     for idx, sample in enumerate(samples):
         sample_errors = validate_payload(exp.input_schema, sample)
@@ -155,15 +165,41 @@ def import_samples(db: Session, experiment_id: int, samples: list[dict[str, Any]
     exp.executed_samples = 0
     exp.status = ExperimentStatus.RUNNING
     db.commit()
+    visible_sample_count = _wait_for_visible_sample_count(exp.id, len(samples), exp.uuid)
     write_log(
         action="samples.import",
         status="success",
         user_id=user.username,
         experiment_uuid=exp.uuid,
-        metadata={"count": len(samples)},
+        metadata={"count": len(samples), "visible_sample_count": visible_sample_count},
     )
     start_experiment_execution(exp.id, exp.uuid)
     return {"imported": len(samples), "experiment_uuid": exp.uuid, "errors": []}
+
+
+def _wait_for_visible_sample_count(experiment_id: int, expected_count: int, experiment_uuid: str) -> int:
+    from .database import SessionLocal
+
+    visible_count = 0
+    for attempt, delay in enumerate([0.0, 0.2, 0.5, 1.0, 2.0, 3.0], start=1):
+        if delay:
+            time.sleep(delay)
+        check_db = SessionLocal()
+        try:
+            visible_count = check_db.scalar(
+                select(func.count(ExperimentSample.id)).where(ExperimentSample.experiment_id == experiment_id)
+            ) or 0
+        finally:
+            check_db.close()
+        if visible_count >= expected_count:
+            return visible_count
+        write_log(
+            action="samples.import.visibility_wait",
+            status="waiting",
+            experiment_uuid=experiment_uuid,
+            metadata={"attempt": attempt, "visible_sample_count": visible_count, "expected_sample_count": expected_count},
+        )
+    return visible_count
 
 
 def start_experiment_execution(experiment_id: int, experiment_uuid: str | None = None) -> bool:
@@ -199,17 +235,19 @@ def execute_experiment_sync(experiment_id: int) -> None:
 async def _execute_experiment(experiment_id: int, session_factory) -> None:
     db: Session = session_factory()
     try:
-        exp = get_experiment(db, experiment_id)
-        samples = list(db.scalars(select(ExperimentSample).where(ExperimentSample.experiment_id == exp.id).order_by(ExperimentSample.id)))
+        exp, samples = await _load_execution_inputs(db, experiment_id)
         variants = list(exp.variants)
         write_log(
             action="experiment.execute.start",
             status="started",
             experiment_uuid=exp.uuid,
-            metadata={"sample_count": len(samples), "variant_count": len(variants)},
+            metadata={"sample_count": len(samples), "expected_sample_count": exp.total_samples, "variant_count": len(variants)},
         )
-        if not samples or not variants:
-            raise RuntimeError(f"Cannot execute experiment with sample_count={len(samples)} variant_count={len(variants)}")
+        if len(samples) < exp.total_samples or not variants:
+            raise RuntimeError(
+                f"Cannot execute experiment with sample_count={len(samples)} "
+                f"expected_sample_count={exp.total_samples} variant_count={len(variants)}"
+            )
         for sample in samples:
             for variant in variants:
                 await _run_variant(db, exp, sample, variant)
@@ -241,6 +279,32 @@ async def _execute_experiment(experiment_id: int, session_factory) -> None:
             write_log(action="experiment.execute", status="failed", level="ERROR", experiment_uuid=exp.uuid, why=str(exc))
     finally:
         db.close()
+
+
+async def _load_execution_inputs(db: Session, experiment_id: int) -> tuple[Experiment, list[ExperimentSample]]:
+    delays = [0.0, 0.2, 0.5, 1.0, 2.0, 3.0]
+    for attempt, delay in enumerate(delays, start=1):
+        if delay:
+            await asyncio.sleep(delay)
+            db.rollback()
+            db.expire_all()
+        exp = get_experiment(db, experiment_id)
+        samples = list(
+            db.scalars(
+                select(ExperimentSample)
+                .where(ExperimentSample.experiment_id == exp.id)
+                .order_by(ExperimentSample.id)
+            )
+        )
+        if len(samples) >= exp.total_samples or exp.total_samples == 0 or attempt == len(delays):
+            return exp, samples
+        write_log(
+            action="experiment.execute.samples_wait",
+            status="waiting",
+            experiment_uuid=exp.uuid,
+            metadata={"attempt": attempt, "sample_count": len(samples), "expected_sample_count": exp.total_samples},
+        )
+    raise RuntimeError("unreachable")
 
 
 async def _run_variant(db: Session, exp: Experiment, sample: ExperimentSample, variant: ExperimentVariant) -> None:
